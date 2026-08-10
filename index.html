@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#12160f">
+<title>株メモ</title>
+
+<!-- PWA: manifest is embedded as a data URI so everything stays in one file -->
+<link rel="manifest" href='data:application/manifest+json,{"name":"株メモ","short_name":"株メモ","start_url":".","display":"standalone","background_color":"#f6f4ec","theme_color":"#12160f","icons":[{"src":"data:image/svg%2bxml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 192 192%22%3E%3Crect width=%22192%22 height=%22192%22 rx=%2232%22 fill=%22%23c0392b%22/%3E%3Ctext x=%2296%22 y=%22132%22 font-size=%22120%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22serif%22%3E株%3C/text%3E%3C/svg%3E","sizes":"192x192","type":"image/svg+xml"}]}'>
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' fill='%23c0392b'/%3E%3Ctext x='90' y='125' font-size='110' text-anchor='middle' fill='white' font-family='serif'%3E株%3C/text%3E%3C/svg%3E">
+
+<style>
+:root{
+  --ink:#12160f; --paper:#f6f4ec; --card:#fffdf7; --line:#ddd8c8;
+  --muted:#8a8674; --seal:#c0392b; --grow:#1f6f54; --accent:#b8892b;
+  --shadow: 0 1px 0 #fff inset, 0 1px 3px rgba(30,25,10,.08);
+  --sans:-apple-system,system-ui,"Hiragino Kaku Gothic ProN",sans-serif;
+  --serif:"Hiragino Mincho ProN","Yu Mincho","YuMincho",serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  min-height:100vh;
+  background:radial-gradient(circle at 12% -5%, #fbf9f1, transparent 40%), var(--paper);
+  color:var(--ink); font-family:var(--serif);
+  padding-bottom:calc(96px + env(safe-area-inset-bottom));
+}
+button{font-family:var(--sans)}
+
+.masthead{
+  display:flex; justify-content:space-between; align-items:center;
+  padding:calc(16px + env(safe-area-inset-top)) 20px 16px;
+  border-bottom:2px solid var(--ink); gap:12px; flex-wrap:wrap;
+}
+.mast-left{display:flex; align-items:center; gap:14px}
+.mast-mark{
+  width:44px; height:44px; flex:0 0 44px; background:var(--seal); color:#fff;
+  display:grid; place-items:center; font-size:24px; font-weight:700;
+  border-radius:6px; box-shadow:0 2px 0 rgba(120,20,10,.4); font-family:var(--serif);
+}
+.masthead h1{margin:0; font-size:26px; letter-spacing:.08em; font-weight:700}
+.mast-sub{margin:2px 0 0; font-size:12.5px; color:var(--muted); font-family:var(--sans)}
+.mast-status{font-size:13px; color:var(--muted); font-family:var(--sans); font-variant-numeric:tabular-nums}
+
+.toolbar{
+  display:flex; gap:8px; padding:12px 16px 0; flex-wrap:wrap; align-items:center;
+}
+.tool-btn{
+  appearance:none; cursor:pointer; border:1px solid var(--line); background:#fff;
+  color:var(--muted); padding:7px 13px; border-radius:7px; font-size:13px; font-weight:600;
+}
+.tool-btn:hover{color:var(--ink)}
+.tool-spacer{flex:1}
+
+.tabs{display:flex; padding:0 16px; margin-top:12px; border-bottom:1px solid var(--line)}
+.tab{
+  appearance:none; border:none; background:none; cursor:pointer; padding:12px 18px;
+  font-size:15px; color:var(--muted); font-weight:600; border-bottom:2.5px solid transparent;
+  margin-bottom:-1px; letter-spacing:.03em;
+}
+.tab.on{color:var(--ink); border-color:var(--ink)}
+.tab.on.buy{color:var(--grow); border-color:var(--grow)}
+.tab.on.sell{color:var(--seal); border-color:var(--seal)}
+
+.banner{margin:12px 16px 0; padding:10px 14px; font-size:13.5px; font-family:var(--sans); border-radius:6px}
+.banner.err{background:#fdecea; border-left:3px solid var(--seal); color:#8a241a}
+.banner.ok{background:#eaf4ef; border-left:3px solid var(--grow); color:#1a5c44}
+
+.content{padding:18px 16px}
+.empty{text-align:center; padding:64px 20px; color:var(--muted); font-family:var(--sans)}
+.empty p{margin:0 0 16px; font-size:15px}
+.cta{appearance:none; border:none; cursor:pointer; background:var(--ink); color:#fff; padding:12px 22px; border-radius:8px; font-size:15px; font-weight:600}
+
+.grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:16px}
+.card{background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px; box-shadow:var(--shadow); display:flex; flex-direction:column; gap:12px}
+.card-head{display:flex; justify-content:space-between; align-items:flex-start; gap:8px}
+.ticker{display:flex; flex-direction:column; gap:2px; min-width:0}
+.code{font-size:12px; color:var(--accent); font-weight:700; letter-spacing:.12em; font-family:var(--sans)}
+.name{font-size:19px; font-weight:700; letter-spacing:.03em}
+.card-actions{display:flex; gap:6px; flex:0 0 auto}
+.mini{appearance:none; cursor:pointer; font-size:12px; border:1px solid var(--line); background:#fff; color:var(--muted); padding:4px 10px; border-radius:6px}
+.mini.del{color:var(--seal); border-color:#e8c9c4}
+.summary{margin:0; font-size:13.5px; color:#4a4636; line-height:1.5; font-family:var(--sans)}
+.memo{margin:0; font-size:13px; color:#5b5646; line-height:1.65; white-space:pre-wrap; padding:10px 12px; background:#faf8f0; border-left:2px solid var(--line); border-radius:0 6px 6px 0; font-family:var(--sans)}
+.stats{display:flex; flex-wrap:wrap; gap:8px}
+.stat{flex:1 1 30%; min-width:80px; background:#faf8ef; border:1px solid var(--line); border-radius:7px; padding:8px 10px; display:flex; flex-direction:column; gap:2px}
+.stat.wide{flex-basis:100%}
+.stat-label{font-size:11px; color:var(--muted); font-family:var(--sans)}
+.stat-value{font-size:15px; font-weight:700; font-variant-numeric:tabular-nums; font-family:var(--sans)}
+.price-row{display:flex; justify-content:space-between; align-items:center; padding:12px 14px; border-radius:8px; margin-top:2px; background:#f2efe4; border:1px solid var(--line)}
+.price-row.under{background:#eaf4ef; border-color:#c4e0d3}
+.price-row.over{background:#fbecea; border-color:#eecdc7}
+.pr-label{display:block; font-size:11px; color:var(--muted); font-family:var(--sans)}
+.pr-price{font-size:20px; font-weight:700; font-variant-numeric:tabular-nums; font-family:var(--sans)}
+.pr-div{text-align:right}
+.pr-val{font-size:18px; font-weight:700; font-variant-numeric:tabular-nums; font-family:var(--sans)}
+.price-row.under .pr-val{color:var(--grow)}
+.price-row.over .pr-val{color:var(--seal)}
+
+.rank{display:flex; flex-direction:column; gap:2px; max-width:640px; margin:0 auto}
+.rank-note{font-size:12.5px; color:var(--muted); margin:0 0 12px; font-family:var(--sans)}
+.rank-row{appearance:none; cursor:pointer; text-align:left; width:100%; display:grid; grid-template-columns:34px 1fr auto auto; align-items:center; gap:12px; padding:14px 12px; background:var(--card); border:1px solid var(--line); border-radius:8px}
+.rank-row + .rank-row{margin-top:8px}
+.rank-no{font-size:18px; font-weight:700; color:var(--accent); text-align:center; font-variant-numeric:tabular-nums; font-family:var(--sans)}
+.rank-tick{display:flex; flex-direction:column; min-width:0}
+.rank-code{font-size:11px; color:var(--accent); font-weight:700; letter-spacing:.1em; font-family:var(--sans)}
+.rank-name{font-size:16px; font-weight:700; letter-spacing:.02em}
+.rank-price{font-size:15px; font-weight:600; font-variant-numeric:tabular-nums; color:#4a4636; font-family:var(--sans)}
+.rank-div{font-size:17px; font-weight:700; font-variant-numeric:tabular-nums; font-family:var(--sans); min-width:72px; text-align:right}
+.rank-div.under{color:var(--grow)}
+.rank-div.over{color:var(--seal)}
+
+.fab{position:fixed; right:22px; bottom:calc(24px + env(safe-area-inset-bottom)); width:58px; height:58px; border-radius:50%; border:none; cursor:pointer; background:var(--ink); color:#fff; font-size:30px; line-height:1; box-shadow:0 4px 14px rgba(20,15,5,.3)}
+
+.sheet-backdrop{position:fixed; inset:0; background:rgba(30,25,15,.4); display:flex; align-items:flex-end; justify-content:center; z-index:50}
+.sheet{background:var(--paper); width:100%; max-width:560px; max-height:92vh; overflow:auto; border-radius:16px 16px 0 0; border-top:3px solid var(--ink)}
+.sheet-head{display:flex; justify-content:space-between; align-items:center; padding:18px 20px; border-bottom:1px solid var(--line); position:sticky; top:0; background:var(--paper); z-index:2}
+.sheet-head h2{margin:0; font-size:19px; letter-spacing:.05em}
+.x{appearance:none; border:none; background:none; font-size:26px; cursor:pointer; color:var(--muted); line-height:1}
+.sheet-body{padding:18px 20px; display:flex; flex-direction:column; gap:14px}
+.row2{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+.field{display:flex; flex-direction:column; gap:6px}
+.field-label{font-size:12.5px; color:var(--muted); font-weight:600; font-family:var(--sans)}
+.field input,.field textarea{font-family:var(--sans); font-size:15px; padding:10px 12px; border:1px solid var(--line); border-radius:8px; background:#fff; color:var(--ink); width:100%}
+.field input:focus,.field textarea:focus{outline:2px solid var(--accent); outline-offset:-1px; border-color:var(--accent)}
+.field textarea{resize:vertical; line-height:1.6}
+.hint{font-size:11.5px; color:var(--muted); font-family:var(--sans)}
+.preview{background:#faf8ef; border:1px dashed var(--accent); border-radius:8px; padding:12px 14px; display:flex; flex-direction:column; gap:8px}
+.preview-line{display:flex; justify-content:space-between; align-items:baseline; gap:10px}
+.preview-label{font-size:12px; color:var(--muted); font-family:var(--sans)}
+.preview-value{font-size:16px; font-weight:700; font-variant-numeric:tabular-nums; font-family:var(--sans)}
+.preview-value.under{color:var(--grow)}
+.preview-value.over{color:var(--seal)}
+.sheet-foot{display:flex; gap:10px; padding:14px 20px calc(22px + env(safe-area-inset-bottom)); position:sticky; bottom:0; background:var(--paper); border-top:1px solid var(--line)}
+.ghost{flex:1; appearance:none; cursor:pointer; background:#fff; border:1px solid var(--line); color:var(--muted); padding:12px; border-radius:9px; font-size:15px; font-weight:600}
+.primary{flex:2; appearance:none; cursor:pointer; background:var(--ink); color:#fff; border:none; padding:12px; border-radius:9px; font-size:15px; font-weight:700}
+
+@media (max-width:420px){ .masthead h1{font-size:22px} .rank-price{display:none} }
+@media (prefers-reduced-motion:reduce){*{transition:none!important; animation:none!important}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<!-- hidden file input for JSON import -->
+<input type="file" id="importInput" accept="application/json,.json" style="display:none">
+
+<script>
+(function(){
+  "use strict";
+
+  var STORAGE_KEY = "kabu:cards:v1";
+
+  // ---------- state ----------
+  var state = {
+    cards: load(),
+    tab: "list",        // list | buy | sell
+    editing: null,      // card object being edited, or null
+    banner: null        // {type:'ok'|'err', text}
+  };
+
+  function load(){
+    try{
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if(!raw) return [];
+      var arr = JSON.parse(raw);
+      return Array.isArray(arr) ? arr : [];
+    }catch(e){ return []; }
+  }
+  function save(){
+    try{
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state.cards));
+    }catch(e){
+      flash("err","保存に失敗しました。端末の空き容量をご確認ください。");
+    }
+  }
+  function flash(type,text){
+    state.banner = {type:type, text:text};
+    render();
+    setTimeout(function(){ state.banner=null; render(); }, 2600);
+  }
+
+  function uid(){
+    return (crypto && crypto.randomUUID) ? crypto.randomUUID()
+      : "id-"+Date.now()+"-"+Math.random().toString(16).slice(2);
+  }
+
+  // ---------- calc ----------
+  function num(v){ var n=parseFloat(v); return isFinite(n)?n:NaN; }
+
+  // 想定株価レンジ = EPSレンジ × PERレンジ。無ければ旧rangeにフォールバック。
+  function targetRange(c){
+    var el=num(c.epsLow), eh=num(c.epsHigh), pl=num(c.perLow), ph=num(c.perHigh);
+    var hasEps = isFinite(el) && el>0, hasPer = isFinite(pl) && pl>0;
+    if(hasEps && hasPer){
+      var ehh = (isFinite(eh)&&eh>0)?eh:el;
+      var phh = (isFinite(ph)&&ph>0)?ph:pl;
+      var lo=el*pl, hi=ehh*phh;
+      return {low:Math.min(lo,hi), high:Math.max(lo,hi)};
+    }
+    var rl=num(c.rangeLow), rh=num(c.rangeHigh);
+    if(isFinite(rl) && rl>0){ return {low:rl, high:(isFinite(rh)&&rh>0)?rh:rl}; }
+    return null;
+  }
+  // 乖離率 = (現在株価 - 想定下限) / 想定下限
+  function divergence(c){
+    var r=targetRange(c), p=num(c.price);
+    if(!r || !isFinite(p) || p<=0) return null;
+    return (p - r.low)/r.low;
+  }
+  function pct(n){
+    if(n===null) return "—";
+    return (n>0?"+":"") + (n*100).toFixed(1) + "%";
+  }
+  function yen(v){
+    var n=num(v);
+    if(!isFinite(n)) return "—";
+    return "¥" + Math.round(n).toLocaleString("ja-JP");
+  }
+  function rangeText(lo,hi){
+    var a=num(lo), b=num(hi);
+    if(!isFinite(a)) return "—";
+    if(!isFinite(b) || b===a) return ""+a;
+    return a+"〜"+b;
+  }
+  function esc(s){
+    return String(s==null?"":s)
+      .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+      .replace(/"/g,"&quot;");
+  }
+
+  // ---------- rankings ----------
+  function ranked(dir){
+    var rows = state.cards.map(function(c){ return {c:c, d:divergence(c)}; })
+      .filter(function(x){ return x.d!==null; });
+    rows.sort(function(a,b){ return dir==="buy" ? a.d-b.d : b.d-a.d; });
+    return rows;
+  }
+
+  // ---------- render ----------
+  var app = document.getElementById("app");
+
+  function render(){
+    var html = "";
+    html += masthead();
+    html += toolbar();
+    html += tabs();
+    if(state.banner){
+      html += '<div class="banner '+state.banner.type+'">'+esc(state.banner.text)+'</div>';
+    }
+    html += '<main class="content">';
+    if(state.tab==="list") html += listView();
+    else html += rankView(state.tab);
+    html += '</main>';
+    if(state.tab==="list" && state.cards.length>0){
+      html += '<button class="fab" data-act="new" aria-label="銘柄を追加">＋</button>';
+    }
+    if(state.editing) html += editor(state.editing);
+    app.innerHTML = html;
+    bind();
+  }
+
+  function masthead(){
+    var status = state.cards.length + " 銘柄";
+    return ''+
+      '<header class="masthead">'+
+        '<div class="mast-left">'+
+          '<div class="mast-mark">株</div>'+
+          '<div><h1>株メモ</h1><p class="mast-sub">決算メモと想定株価レンジで、買い時・売り時を並べる</p></div>'+
+        '</div>'+
+        '<div class="mast-status">'+status+'</div>'+
+      '</header>';
+  }
+
+  function toolbar(){
+    return ''+
+      '<div class="toolbar">'+
+        '<button class="tool-btn" data-act="export">JSON書き出し</button>'+
+        '<button class="tool-btn" data-act="import">JSON読み込み</button>'+
+        '<span class="tool-spacer"></span>'+
+      '</div>';
+  }
+
+  function tabs(){
+    function t(key,label,cls){
+      var on = state.tab===key ? (" on"+(cls?(" "+cls):"")) : "";
+      return '<button class="tab'+on+'" data-tab="'+key+'">'+label+'</button>';
+    }
+    return '<nav class="tabs">'+t("list","一覧","")+t("buy","買い候補","buy")+t("sell","売り候補","sell")+'</nav>';
+  }
+
+  function listView(){
+    if(state.cards.length===0){
+      return '<div class="empty"><p>まだ銘柄がありません。</p>'+
+             '<button class="cta" data-act="new">最初の銘柄を追加</button></div>';
+    }
+    return '<div class="grid">'+state.cards.map(cardHtml).join("")+'</div>';
+  }
+
+  function cardHtml(c){
+    var d=divergence(c), r=targetRange(c);
+    var tone = d===null ? "" : (d<0?"under":"over");
+    var body = "";
+    body += '<div class="card-head">'+
+      '<div class="ticker"><span class="code">'+esc(c.code||"—")+'</span>'+
+      '<span class="name">'+esc(c.name||"（無名）")+'</span></div>'+
+      '<div class="card-actions">'+
+        '<button class="mini" data-edit="'+c.id+'">編集</button>'+
+        '<button class="mini del" data-del="'+c.id+'">削除</button>'+
+      '</div></div>';
+    if(c.summary) body += '<p class="summary">'+esc(c.summary)+'</p>';
+    if(c.memo) body += '<p class="memo">'+esc(c.memo)+'</p>';
+    body += '<div class="stats">'+
+      stat("想定EPS", rangeText(c.epsLow,c.epsHigh), false)+
+      stat("想定PER", rangeText(c.perLow,c.perHigh), false)+
+      stat("想定株価（EPS×PER）", r?(yen(r.low)+"〜"+yen(r.high)):"—", true)+
+    '</div>';
+    body += '<div class="price-row '+tone+'">'+
+      '<div><span class="pr-label">現在株価</span><span class="pr-price">'+yen(c.price)+'</span></div>'+
+      '<div class="pr-div"><span class="pr-label">下限乖離</span><span class="pr-val">'+pct(d)+'</span></div>'+
+    '</div>';
+    return '<article class="card">'+body+'</article>';
+  }
+
+  function stat(label,value,wide){
+    return '<div class="stat'+(wide?" wide":"")+'">'+
+      '<span class="stat-label">'+esc(label)+'</span>'+
+      '<span class="stat-value">'+esc(value)+'</span></div>';
+  }
+
+  function rankView(mode){
+    var rows = ranked(mode);
+    if(rows.length===0){
+      return '<div class="empty"><p>ランキングを出すには、想定EPS・PERと現在株価が要ります。</p></div>';
+    }
+    var note = mode==="buy" ? "想定レンジ下限より安い順。上ほど割安。"
+                            : "想定レンジ下限より高い順。上ほど割高。";
+    var out = '<div class="rank"><p class="rank-note">'+note+'</p>';
+    rows.forEach(function(x,i){
+      var c=x.c, d=x.d, tone=d<0?"under":"over";
+      out += '<button class="rank-row" data-edit="'+c.id+'">'+
+        '<span class="rank-no">'+(i+1)+'</span>'+
+        '<span class="rank-tick"><span class="rank-code">'+esc(c.code||"—")+'</span>'+
+        '<span class="rank-name">'+esc(c.name||"（無名）")+'</span></span>'+
+        '<span class="rank-price">'+yen(c.price)+'</span>'+
+        '<span class="rank-div '+tone+'">'+pct(d)+'</span>'+
+      '</button>';
+    });
+    return out+'</div>';
+  }
+
+  function editor(v){
+    var r=targetRange(v), d=divergence(v);
+    var previewRange = r ? (yen(r.low)+"〜"+yen(r.high)) : "EPS・PERを入れると自動計算";
+    var previewDiv = d!==null ?
+      '<div class="preview-line"><span class="preview-label">下限乖離</span>'+
+      '<span class="preview-value '+(d<0?"under":"over")+'">'+pct(d)+'</span></div>' : "";
+    function f(label,key,ph,mode){
+      return '<label class="field"><span class="field-label">'+label+'</span>'+
+        '<input data-field="'+key+'" value="'+esc(v[key])+'" placeholder="'+ph+'"'+
+        (mode?(' inputmode="'+mode+'"'):'')+'></label>';
+    }
+    return ''+
+    '<div class="sheet-backdrop" data-act="close-bg">'+
+      '<div class="sheet" data-stop="1">'+
+        '<div class="sheet-head"><h2>銘柄メモ</h2><button class="x" data-act="close">×</button></div>'+
+        '<div class="sheet-body">'+
+          '<div class="row2">'+f("コード","code","6367","numeric")+f("銘柄名","name","ダイキン","")+'</div>'+
+          '<label class="field"><span class="field-label">どんな会社か</span>'+
+            '<input data-field="summary" value="'+esc(v.summary)+'" placeholder="空調の世界大手。業務用に強い。"></label>'+
+          '<label class="field"><span class="field-label">決算メモ</span>'+
+            '<textarea data-field="memo" rows="4" placeholder="1Q eps◯◯、○○が好調。割引要素は…">'+esc(v.memo)+'</textarea></label>'+
+          '<div class="row2">'+f("想定EPS 下限","epsLow","135","decimal")+f("想定EPS 上限","epsHigh","135","decimal")+'</div>'+
+          '<div class="row2">'+f("想定PER 下限","perLow","15","decimal")+f("想定PER 上限","perHigh","18","decimal")+'</div>'+
+          '<div class="preview">'+
+            '<div class="preview-line"><span class="preview-label">想定株価レンジ</span>'+
+            '<span class="preview-value">'+previewRange+'</span></div>'+ previewDiv +
+          '</div>'+
+          '<label class="field"><span class="field-label">現在株価</span>'+
+            '<input data-field="price" value="'+esc(v.price)+'" placeholder="2050" inputmode="decimal">'+
+            '<span class="hint">想定株価レンジは EPS×PER で自動計算。乖離とランキングは「下限」と「現在株価」で出します。</span></label>'+
+        '</div>'+
+        '<div class="sheet-foot">'+
+          '<button class="ghost" data-act="close">やめる</button>'+
+          '<button class="primary" data-act="save">保存</button>'+
+        '</div>'+
+      '</div>'+
+    '</div>';
+  }
+
+  // ---------- events ----------
+  function blank(){
+    return {id:uid(), code:"",name:"",summary:"",memo:"",
+      epsLow:"",epsHigh:"",perLow:"",perHigh:"",price:"",rangeLow:"",rangeHigh:""};
+  }
+
+  function bind(){
+    // tabs
+    app.querySelectorAll("[data-tab]").forEach(function(b){
+      b.onclick=function(){ state.tab=b.getAttribute("data-tab"); render(); };
+    });
+    // top-level actions
+    app.querySelectorAll("[data-act]").forEach(function(b){
+      var act=b.getAttribute("data-act");
+      b.onclick=function(e){
+        if(act==="new"){ state.editing=blank(); render(); }
+        else if(act==="close"){ state.editing=null; render(); }
+        else if(act==="close-bg"){ if(e.target===b){ state.editing=null; render(); } }
+        else if(act==="save"){ saveEditing(); }
+        else if(act==="export"){ doExport(); }
+        else if(act==="import"){ document.getElementById("importInput").click(); }
+      };
+    });
+    // stop backdrop close when clicking inside sheet
+    var sheet = app.querySelector('[data-stop]');
+    if(sheet) sheet.onclick=function(e){ e.stopPropagation(); };
+    // edit / delete
+    app.querySelectorAll("[data-edit]").forEach(function(b){
+      b.onclick=function(){
+        var id=b.getAttribute("data-edit");
+        var c=state.cards.filter(function(x){return x.id===id;})[0];
+        if(c){ state.editing=JSON.parse(JSON.stringify(c)); render(); }
+      };
+    });
+    app.querySelectorAll("[data-del]").forEach(function(b){
+      b.onclick=function(){
+        var id=b.getAttribute("data-del");
+        state.cards=state.cards.filter(function(x){return x.id!==id;});
+        save(); render();
+      };
+    });
+    // live-bind editing fields
+    app.querySelectorAll("[data-field]").forEach(function(inp){
+      inp.oninput=function(){
+        if(!state.editing) return;
+        state.editing[inp.getAttribute("data-field")] = inp.value;
+        updatePreview();
+      };
+    });
+  }
+
+  // update just the preview box without full re-render (keeps input focus)
+  function updatePreview(){
+    var v=state.editing; if(!v) return;
+    var r=targetRange(v), d=divergence(v);
+    var box=app.querySelector(".preview"); if(!box) return;
+    box.innerHTML =
+      '<div class="preview-line"><span class="preview-label">想定株価レンジ</span>'+
+      '<span class="preview-value">'+(r?(yen(r.low)+"〜"+yen(r.high)):"EPS・PERを入れると自動計算")+'</span></div>'+
+      (d!==null ?
+        '<div class="preview-line"><span class="preview-label">下限乖離</span>'+
+        '<span class="preview-value '+(d<0?"under":"over")+'">'+pct(d)+'</span></div>' : "");
+  }
+
+  function saveEditing(){
+    var v=state.editing;
+    if(!v.name && !v.name.trim && !v.code){}
+    if(!(v.name||"").trim() && !(v.code||"").trim()){
+      flash("err","銘柄名かコードのどちらかは入れてください。");
+      return;
+    }
+    var exists = state.cards.some(function(c){return c.id===v.id;});
+    if(exists){
+      state.cards = state.cards.map(function(c){ return c.id===v.id ? v : c; });
+    }else{
+      state.cards = state.cards.concat([v]);
+    }
+    save();
+    state.editing=null;
+    render();
+  }
+
+  // ---------- JSON export / import ----------
+  function doExport(){
+    var payload = { app:"kabu-memo", version:1, exportedAt:new Date().toISOString(), cards:state.cards };
+    var blob = new Blob([JSON.stringify(payload,null,2)], {type:"application/json"});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    var d = new Date();
+    var stamp = d.getFullYear()+String(d.getMonth()+1).padStart(2,"0")+String(d.getDate()).padStart(2,"0");
+    a.href=url; a.download="kabu-memo-"+stamp+".json";
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+    flash("ok","JSONを書き出しました。");
+  }
+
+  document.getElementById("importInput").addEventListener("change", function(e){
+    var file = e.target.files && e.target.files[0];
+    if(!file) return;
+    var reader = new FileReader();
+    reader.onload = function(){
+      try{
+        var data = JSON.parse(reader.result);
+        var incoming = Array.isArray(data) ? data : (data && data.cards);
+        if(!Array.isArray(incoming)) throw new Error("形式が違います");
+        // 取り込み方式: コードが一致するものは上書き、無ければ追加
+        var byKey = {};
+        state.cards.forEach(function(c){ byKey[keyOf(c)] = c; });
+        incoming.forEach(function(c){
+          if(!c.id) c.id = uid();
+          byKey[keyOf(c)] = normalize(c);
+        });
+        state.cards = Object.keys(byKey).map(function(k){ return byKey[k]; });
+        save();
+        flash("ok", incoming.length+" 銘柄を読み込みました。");
+      }catch(err){
+        flash("err","読み込めませんでした。JSONファイルをご確認ください。");
+      }
+      e.target.value="";
+      render();
+    };
+    reader.readAsText(file);
+  });
+
+  function keyOf(c){
+    var k=(c.code||"").trim();
+    return k ? ("code:"+k) : ("id:"+(c.id||uid()));
+  }
+  function normalize(c){
+    var out = blank();
+    out.id = c.id || out.id;
+    ["code","name","summary","memo","epsLow","epsHigh","perLow","perHigh","price","rangeLow","rangeHigh"]
+      .forEach(function(k){ if(c[k]!=null) out[k]=c[k]; });
+    // 旧単一eps/perフィールドがあれば下限に寄せて拾う
+    if(c.eps!=null && out.epsLow==="") out.epsLow=c.eps;
+    if(c.per!=null && out.perLow==="") out.perLow=c.per;
+    return out;
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>
