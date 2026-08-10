@@ -72,15 +72,27 @@ button{font-family:var(--sans)}
 .empty p{margin:0 0 16px; font-size:15px}
 .cta{appearance:none; border:none; cursor:pointer; background:var(--ink); color:#fff; padding:12px 22px; border-radius:8px; font-size:15px; font-weight:600}
 
-.grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:16px}
-.card{background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px; box-shadow:var(--shadow); display:flex; flex-direction:column; gap:12px}
-.card-head{display:flex; justify-content:space-between; align-items:flex-start; gap:8px}
 .ticker{display:flex; flex-direction:column; gap:2px; min-width:0}
 .code{font-size:12px; color:var(--accent); font-weight:700; letter-spacing:.12em; font-family:var(--sans)}
 .name{font-size:19px; font-weight:700; letter-spacing:.03em}
-.card-actions{display:flex; gap:6px; flex:0 0 auto}
-.mini{appearance:none; cursor:pointer; font-size:12px; border:1px solid var(--line); background:#fff; color:var(--muted); padding:4px 10px; border-radius:6px}
-.mini.del{color:var(--seal); border-color:#e8c9c4}
+
+/* row list (一覧・候補で共通) */
+.rows{display:flex; flex-direction:column; gap:8px; max-width:640px; margin:0 auto}
+.row{
+  appearance:none; cursor:pointer; text-align:left; width:100%;
+  display:grid; grid-template-columns:34px 1fr auto; align-items:center; gap:12px;
+  padding:14px 14px; background:var(--card); border:1px solid var(--line); border-radius:8px;
+}
+.row:hover{border-color:var(--accent)}
+.row-no{font-size:17px; font-weight:700; color:var(--accent); text-align:center; font-variant-numeric:tabular-nums; font-family:var(--sans)}
+.row-no.dot{color:var(--line)}
+.row-tick{display:flex; flex-direction:column; min-width:0; gap:1px}
+.row-code{font-size:11px; color:var(--accent); font-weight:700; letter-spacing:.1em; font-family:var(--sans)}
+.row-name{font-size:16px; font-weight:700; letter-spacing:.02em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.row-div{font-size:17px; font-weight:700; font-variant-numeric:tabular-nums; font-family:var(--sans); min-width:72px; text-align:right; color:var(--muted)}
+.row-div.under{color:var(--grow)}
+.row-div.over{color:var(--seal)}
+
 .summary{margin:0; font-size:13.5px; color:#4a4636; line-height:1.5; font-family:var(--sans)}
 .memo{margin:0; font-size:13px; color:#5b5646; line-height:1.65; white-space:pre-wrap; padding:10px 12px; background:#faf8f0; border-left:2px solid var(--line); border-radius:0 6px 6px 0; font-family:var(--sans)}
 .stats{display:flex; flex-wrap:wrap; gap:8px}
@@ -98,18 +110,7 @@ button{font-family:var(--sans)}
 .price-row.under .pr-val{color:var(--grow)}
 .price-row.over .pr-val{color:var(--seal)}
 
-.rank{display:flex; flex-direction:column; gap:2px; max-width:640px; margin:0 auto}
-.rank-note{font-size:12.5px; color:var(--muted); margin:0 0 12px; font-family:var(--sans)}
-.rank-row{appearance:none; cursor:pointer; text-align:left; width:100%; display:grid; grid-template-columns:34px 1fr auto auto; align-items:center; gap:12px; padding:14px 12px; background:var(--card); border:1px solid var(--line); border-radius:8px}
-.rank-row + .rank-row{margin-top:8px}
-.rank-no{font-size:18px; font-weight:700; color:var(--accent); text-align:center; font-variant-numeric:tabular-nums; font-family:var(--sans)}
-.rank-tick{display:flex; flex-direction:column; min-width:0}
-.rank-code{font-size:11px; color:var(--accent); font-weight:700; letter-spacing:.1em; font-family:var(--sans)}
-.rank-name{font-size:16px; font-weight:700; letter-spacing:.02em}
-.rank-price{font-size:15px; font-weight:600; font-variant-numeric:tabular-nums; color:#4a4636; font-family:var(--sans)}
-.rank-div{font-size:17px; font-weight:700; font-variant-numeric:tabular-nums; font-family:var(--sans); min-width:72px; text-align:right}
-.rank-div.under{color:var(--grow)}
-.rank-div.over{color:var(--seal)}
+.rank-note{font-size:12.5px; color:var(--muted); margin:0 0 4px; font-family:var(--sans)}
 
 .fab{position:fixed; right:22px; bottom:calc(24px + env(safe-area-inset-bottom)); width:58px; height:58px; border-radius:50%; border:none; cursor:pointer; background:var(--ink); color:#fff; font-size:30px; line-height:1; box-shadow:0 4px 14px rgba(20,15,5,.3)}
 
@@ -134,9 +135,10 @@ button{font-family:var(--sans)}
 .preview-value.over{color:var(--seal)}
 .sheet-foot{display:flex; gap:10px; padding:14px 20px calc(22px + env(safe-area-inset-bottom)); position:sticky; bottom:0; background:var(--paper); border-top:1px solid var(--line)}
 .ghost{flex:1; appearance:none; cursor:pointer; background:#fff; border:1px solid var(--line); color:var(--muted); padding:12px; border-radius:9px; font-size:15px; font-weight:600}
+.ghost.del{color:var(--seal); border-color:#e8c9c4}
 .primary{flex:2; appearance:none; cursor:pointer; background:var(--ink); color:#fff; border:none; padding:12px; border-radius:9px; font-size:15px; font-weight:700}
 
-@media (max-width:420px){ .masthead h1{font-size:22px} .rank-price{display:none} }
+@media (max-width:420px){ .masthead h1{font-size:22px} }
 @media (prefers-reduced-motion:reduce){*{transition:none!important; animation:none!important}}
 </style>
 </head>
@@ -156,6 +158,7 @@ button{font-family:var(--sans)}
   var state = {
     cards: load(),
     tab: "list",        // list | buy | sell
+    viewing: null,      // card id being shown in the detail sheet, or null
     editing: null,      // card object being edited, or null
     banner: null        // {type:'ok'|'err', text}
   };
@@ -257,6 +260,10 @@ button{font-family:var(--sans)}
       html += '<button class="fab" data-act="new" aria-label="銘柄を追加">＋</button>';
     }
     if(state.editing) html += editor(state.editing);
+    else if(state.viewing) {
+      var vc = cardById(state.viewing);
+      if(vc) html += detail(vc);
+    }
     app.innerHTML = html;
     bind();
   }
@@ -290,25 +297,59 @@ button{font-family:var(--sans)}
     return '<nav class="tabs">'+t("list","一覧","")+t("buy","買い候補","buy")+t("sell","売り候補","sell")+'</nav>';
   }
 
+  function cardById(id){
+    return state.cards.filter(function(c){return c.id===id;})[0] || null;
+  }
+
+  // 一列の行（一覧・候補で共通）。rank を渡すと左に順位を出す。
+  function row(c, rank){
+    var d=divergence(c);
+    var tone = d===null ? "" : (d<0?"under":"over");
+    var no = rank ? '<span class="row-no">'+rank+'</span>' : '<span class="row-no dot">・</span>';
+    return '<button class="row" data-view="'+c.id+'">'+
+      no+
+      '<span class="row-tick">'+
+        '<span class="row-code">'+esc(c.code||"—")+'</span>'+
+        '<span class="row-name">'+esc(c.name||"（無名）")+'</span>'+
+      '</span>'+
+      '<span class="row-div '+tone+'">'+pct(d)+'</span>'+
+    '</button>';
+  }
+
   function listView(){
     if(state.cards.length===0){
       return '<div class="empty"><p>まだ銘柄がありません。</p>'+
              '<button class="cta" data-act="new">最初の銘柄を追加</button></div>';
     }
-    return '<div class="grid">'+state.cards.map(cardHtml).join("")+'</div>';
+    var out = '<div class="rows">';
+    out += state.cards.map(function(c){ return row(c, null); }).join("");
+    out += '</div>';
+    return out;
   }
 
-  function cardHtml(c){
+  function rankView(mode){
+    var rows = ranked(mode);
+    if(rows.length===0){
+      return '<div class="empty"><p>ランキングを出すには、想定EPS・PERと現在株価が要ります。</p></div>';
+    }
+    var note = mode==="buy" ? "想定レンジ下限より安い順。上ほど割安。"
+                            : "想定レンジ下限より高い順。上ほど割高。";
+    var out = '<div class="rows"><p class="rank-note">'+note+'</p>';
+    rows.forEach(function(x,i){ out += row(x.c, i+1); });
+    return out+'</div>';
+  }
+
+  function stat(label,value,wide){
+    return '<div class="stat'+(wide?" wide":"")+'">'+
+      '<span class="stat-label">'+esc(label)+'</span>'+
+      '<span class="stat-value">'+esc(value)+'</span></div>';
+  }
+
+  // ---------- detail sheet ----------
+  function detail(c){
     var d=divergence(c), r=targetRange(c);
     var tone = d===null ? "" : (d<0?"under":"over");
     var body = "";
-    body += '<div class="card-head">'+
-      '<div class="ticker"><span class="code">'+esc(c.code||"—")+'</span>'+
-      '<span class="name">'+esc(c.name||"（無名）")+'</span></div>'+
-      '<div class="card-actions">'+
-        '<button class="mini" data-edit="'+c.id+'">編集</button>'+
-        '<button class="mini del" data-del="'+c.id+'">削除</button>'+
-      '</div></div>';
     if(c.summary) body += '<p class="summary">'+esc(c.summary)+'</p>';
     if(c.memo) body += '<p class="memo">'+esc(c.memo)+'</p>';
     body += '<div class="stats">'+
@@ -320,34 +361,21 @@ button{font-family:var(--sans)}
       '<div><span class="pr-label">現在株価</span><span class="pr-price">'+yen(c.price)+'</span></div>'+
       '<div class="pr-div"><span class="pr-label">下限乖離</span><span class="pr-val">'+pct(d)+'</span></div>'+
     '</div>';
-    return '<article class="card">'+body+'</article>';
-  }
-
-  function stat(label,value,wide){
-    return '<div class="stat'+(wide?" wide":"")+'">'+
-      '<span class="stat-label">'+esc(label)+'</span>'+
-      '<span class="stat-value">'+esc(value)+'</span></div>';
-  }
-
-  function rankView(mode){
-    var rows = ranked(mode);
-    if(rows.length===0){
-      return '<div class="empty"><p>ランキングを出すには、想定EPS・PERと現在株価が要ります。</p></div>';
-    }
-    var note = mode==="buy" ? "想定レンジ下限より安い順。上ほど割安。"
-                            : "想定レンジ下限より高い順。上ほど割高。";
-    var out = '<div class="rank"><p class="rank-note">'+note+'</p>';
-    rows.forEach(function(x,i){
-      var c=x.c, d=x.d, tone=d<0?"under":"over";
-      out += '<button class="rank-row" data-edit="'+c.id+'">'+
-        '<span class="rank-no">'+(i+1)+'</span>'+
-        '<span class="rank-tick"><span class="rank-code">'+esc(c.code||"—")+'</span>'+
-        '<span class="rank-name">'+esc(c.name||"（無名）")+'</span></span>'+
-        '<span class="rank-price">'+yen(c.price)+'</span>'+
-        '<span class="rank-div '+tone+'">'+pct(d)+'</span>'+
-      '</button>';
-    });
-    return out+'</div>';
+    return ''+
+    '<div class="sheet-backdrop" data-act="close-view-bg">'+
+      '<div class="sheet" data-stop="1">'+
+        '<div class="sheet-head">'+
+          '<div class="ticker"><span class="code">'+esc(c.code||"—")+'</span>'+
+          '<span class="name">'+esc(c.name||"（無名）")+'</span></div>'+
+          '<button class="x" data-act="close-view">×</button>'+
+        '</div>'+
+        '<div class="sheet-body">'+body+'</div>'+
+        '<div class="sheet-foot">'+
+          '<button class="ghost del" data-act="del-view">削除</button>'+
+          '<button class="primary" data-act="edit-view">編集</button>'+
+        '</div>'+
+      '</div>'+
+    '</div>';
   }
 
   function editor(v){
@@ -410,25 +438,26 @@ button{font-family:var(--sans)}
         else if(act==="save"){ saveEditing(); }
         else if(act==="export"){ doExport(); }
         else if(act==="import"){ document.getElementById("importInput").click(); }
+        // detail sheet
+        else if(act==="close-view"){ state.viewing=null; render(); }
+        else if(act==="close-view-bg"){ if(e.target===b){ state.viewing=null; render(); } }
+        else if(act==="edit-view"){
+          var c=cardById(state.viewing);
+          if(c){ state.editing=JSON.parse(JSON.stringify(c)); state.viewing=null; render(); }
+        }
+        else if(act==="del-view"){
+          var id=state.viewing;
+          state.cards=state.cards.filter(function(x){return x.id!==id;});
+          state.viewing=null; save(); render();
+        }
       };
     });
     // stop backdrop close when clicking inside sheet
     var sheet = app.querySelector('[data-stop]');
     if(sheet) sheet.onclick=function(e){ e.stopPropagation(); };
-    // edit / delete
-    app.querySelectorAll("[data-edit]").forEach(function(b){
-      b.onclick=function(){
-        var id=b.getAttribute("data-edit");
-        var c=state.cards.filter(function(x){return x.id===id;})[0];
-        if(c){ state.editing=JSON.parse(JSON.stringify(c)); render(); }
-      };
-    });
-    app.querySelectorAll("[data-del]").forEach(function(b){
-      b.onclick=function(){
-        var id=b.getAttribute("data-del");
-        state.cards=state.cards.filter(function(x){return x.id!==id;});
-        save(); render();
-      };
+    // row tap → detail
+    app.querySelectorAll("[data-view]").forEach(function(b){
+      b.onclick=function(){ state.viewing=b.getAttribute("data-view"); render(); };
     });
     // live-bind editing fields
     app.querySelectorAll("[data-field]").forEach(function(inp){
