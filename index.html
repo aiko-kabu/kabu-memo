@@ -420,7 +420,7 @@ button{font-family:var(--sans)}
   // ---------- events ----------
   function blank(){
     return {id:uid(), code:"",name:"",summary:"",memo:"",
-      epsLow:"",epsHigh:"",perLow:"",perHigh:"",price:"",rangeLow:"",rangeHigh:""};
+      epsLow:"",epsHigh:"",perLow:"",perHigh:"",price:"",rangeLow:"",rangeHigh:"",updatedAt:""};
   }
 
   function bind(){
@@ -489,6 +489,7 @@ button{font-family:var(--sans)}
       flash("err","銘柄名かコードのどちらかは入れてください。");
       return;
     }
+    v.updatedAt = new Date().toISOString(); // 保存のたびに更新時刻を刻む
     var exists = state.cards.some(function(c){return c.id===v.id;});
     if(exists){
       state.cards = state.cards.map(function(c){ return c.id===v.id ? v : c; });
@@ -524,16 +525,35 @@ button{font-family:var(--sans)}
         var data = JSON.parse(reader.result);
         var incoming = Array.isArray(data) ? data : (data && data.cards);
         if(!Array.isArray(incoming)) throw new Error("形式が違います");
-        // 取り込み方式: コードが一致するものは上書き、無ければ追加
+
+        // 時刻ベースのマージ: 同じ銘柄は「最終更新が新しい方」を残す。
         var byKey = {};
         state.cards.forEach(function(c){ byKey[keyOf(c)] = c; });
-        incoming.forEach(function(c){
-          if(!c.id) c.id = uid();
-          byKey[keyOf(c)] = normalize(c);
+
+        var added=0, updated=0, kept=0;
+        incoming.forEach(function(raw){
+          if(!raw.id) raw.id = uid();
+          var inc = normalize(raw);
+          var key = keyOf(inc);
+          var cur = byKey[key];
+          if(!cur){
+            byKey[key] = inc; added++;              // こっちに無い銘柄 → 追加
+          }else if(newer(inc) > newer(cur)){
+            // 取り込む側の方が新しい → 更新（idは手元のものを維持して重複を防ぐ）
+            inc.id = cur.id;
+            byKey[key] = inc; updated++;
+          }else{
+            kept++;                                  // 手元の方が新しい/同じ → そのまま残す
+          }
         });
         state.cards = Object.keys(byKey).map(function(k){ return byKey[k]; });
         save();
-        flash("ok", incoming.length+" 銘柄を読み込みました。");
+
+        var parts=[];
+        if(added) parts.push("追加 "+added);
+        if(updated) parts.push("更新 "+updated);
+        if(kept) parts.push("据え置き "+kept);
+        flash("ok", "読み込み完了（"+(parts.join(" / ")||"変更なし")+"）");
       }catch(err){
         flash("err","読み込めませんでした。JSONファイルをご確認ください。");
       }
@@ -543,6 +563,12 @@ button{font-family:var(--sans)}
     reader.readAsText(file);
   });
 
+  // 比較用のタイムスタンプ（無ければ 0 = 最古扱い）
+  function newer(c){
+    var t = c && c.updatedAt ? Date.parse(c.updatedAt) : NaN;
+    return isFinite(t) ? t : 0;
+  }
+
   function keyOf(c){
     var k=(c.code||"").trim();
     return k ? ("code:"+k) : ("id:"+(c.id||uid()));
@@ -550,7 +576,7 @@ button{font-family:var(--sans)}
   function normalize(c){
     var out = blank();
     out.id = c.id || out.id;
-    ["code","name","summary","memo","epsLow","epsHigh","perLow","perHigh","price","rangeLow","rangeHigh"]
+    ["code","name","summary","memo","epsLow","epsHigh","perLow","perHigh","price","rangeLow","rangeHigh","updatedAt"]
       .forEach(function(k){ if(c[k]!=null) out[k]=c[k]; });
     // 旧単一eps/perフィールドがあれば下限に寄せて拾う
     if(c.eps!=null && out.epsLow==="") out.epsLow=c.eps;
