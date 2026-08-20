@@ -144,6 +144,49 @@ button{font-family:var(--sans)}
 
 @media (max-width:420px){ .masthead h1{font-size:22px} }
 @media (prefers-reduced-motion:reduce){*{transition:none!important; animation:none!important}}
+
+/* toolbar accent (AI paste) */
+.tool-btn.accent{background:var(--seal); color:#fff; border-color:var(--seal)}
+.tool-btn.accent:hover{color:#fff; opacity:.92}
+
+/* score badge on rows */
+.row-score{display:inline-block; margin-left:8px; background:var(--ink); color:#fff; font-family:var(--sans); font-size:11px; font-weight:700; padding:1px 7px; border-radius:10px; vertical-align:middle; font-variant-numeric:tabular-nums}
+
+/* paste modal */
+.paste-help{font-size:13px; color:#5b5646; line-height:1.6; font-family:var(--sans); margin:0 0 12px}
+.paste-help b{color:var(--ink)}
+
+/* analysis block in detail */
+.analysis{display:flex; flex-direction:column; gap:14px; margin-top:4px}
+.score-row{display:flex; justify-content:space-between; align-items:center; background:var(--ink); color:#fff; padding:12px 16px; border-radius:8px}
+.score-label{font-size:13px; font-family:var(--sans); letter-spacing:.04em}
+.score-val{font-size:24px; font-weight:800; font-family:var(--sans); font-variant-numeric:tabular-nums}
+.score-val small{font-size:13px; font-weight:600; opacity:.7}
+.eval-list{display:flex; flex-direction:column; gap:1px; background:var(--line); border:1px solid var(--line); border-radius:8px; overflow:hidden}
+.eval-item{display:grid; grid-template-columns:104px 1fr; gap:10px; background:var(--card); padding:9px 12px}
+.eval-k{font-size:12px; color:var(--muted); font-family:var(--sans); font-weight:600}
+.eval-v{font-size:13.5px; color:#3f3b2d; font-family:var(--sans); line-height:1.5}
+.cats{display:flex; flex-direction:column; gap:10px}
+.cat{border-radius:8px; padding:10px 14px}
+.cat.bull{background:#eaf4ef; border:1px solid #c4e0d3}
+.cat.bear{background:#fbecea; border:1px solid #eecdc7}
+.cat-title{font-size:12px; font-weight:700; font-family:var(--sans); letter-spacing:.04em}
+.cat.bull .cat-title{color:var(--grow)}
+.cat.bear .cat-title{color:var(--seal)}
+.cat ul{margin:6px 0 0; padding-left:18px}
+.cat li{font-size:13.5px; color:#3f3b2d; font-family:var(--sans); line-height:1.55; margin:2px 0}
+.basis{background:#faf8ef; border-left:3px solid var(--accent); border-radius:0 6px 6px 0; padding:9px 12px; display:flex; flex-direction:column; gap:3px}
+.basis-k{font-size:11.5px; color:var(--accent); font-weight:700; font-family:var(--sans)}
+.basis-v{font-size:13.5px; color:#3f3b2d; font-family:var(--sans); line-height:1.55}
+.watch{background:#f2efe4; border:1px solid var(--line); border-radius:8px; padding:10px 14px; display:flex; flex-direction:column; gap:3px}
+.watch-k{font-size:11.5px; color:var(--muted); font-weight:700; font-family:var(--sans)}
+.watch-v{font-size:13.5px; color:#3f3b2d; font-family:var(--sans); line-height:1.55}
+
+/* extended fields section in editor */
+.ext{border:1px solid var(--line); border-radius:8px; padding:0 14px; background:#fbf9f1}
+.ext summary{cursor:pointer; padding:12px 0; font-size:13.5px; font-weight:700; color:var(--ink); font-family:var(--sans); list-style-position:inside}
+.ext[open] summary{border-bottom:1px solid var(--line); margin-bottom:12px}
+.ext .field{margin-bottom:12px}
 </style>
 </head>
 <body>
@@ -158,12 +201,53 @@ button{font-family:var(--sans)}
 
   var STORAGE_KEY = "kabu:cards:v1";
 
+  // AIに投げる分析プロンプト（コピーボタンで使う）
+  var ANALYSIS_PROMPT =
+'あなたは日本株の決算分析アシスタントです。これから渡す決算短信・IR資料・決算説明資料を読み、'+
+'必要に応じて会社HP・過去決算・株探・IFIS/コンセンサス等の公開情報も踏まえて分析し、'+
+'結果を下記のJSON形式「のみ」で出力してください。前後の説明文やコードフェンスは不要です。\n\n'+
+'制約:\n'+
+'- 数値項目（epsLow, epsHigh, perLow, perHigh, price, score）は数値のみ。\n'+
+'- 理論株価は計算しないでください（アプリがEPS×PERで自動計算します）。\n'+
+'- epsLow/epsHighは想定EPSのレンジ、perLow/perHighは妥当と考えるPERのレンジ。\n'+
+'- bull/bear は配列で、それぞれ根拠を1つずつ簡潔に。\n'+
+'- 各根拠（epsBasis, perBasis）は「なぜその数字か」が半年後に分かるように具体的に。\n'+
+'- 不明な項目は空文字 "" にしてください。憶測で埋めないこと。\n\n'+
+'{\n'+
+'  "code": "証券コード",\n'+
+'  "name": "会社名",\n'+
+'  "summary": "どんな会社か・主力事業・注目テーマを1〜2文で",\n'+
+'  "memo": "決算の要点を自由文で（売上・利益・利益率・受注などの数字を含めて）",\n'+
+'  "score": 8,\n'+
+'  "revGrowth": "売上成長の評価",\n'+
+'  "profGrowth": "利益成長の評価",\n'+
+'  "marginChange": "利益率の変化",\n'+
+'  "surprise": "会社予想やコンセンサスに対する上振れ/下振れ",\n'+
+'  "oneTime": "一時要因の有無と内容",\n'+
+'  "orders": "受注・受注残・契約負債など先行指標",\n'+
+'  "continuity": "この好調/不調は継続的か",\n'+
+'  "nextGuidance": "次期の会社予想",\n'+
+'  "consensus": "市場コンセンサスとの比較",\n'+
+'  "bull": ["強気材料1", "強気材料2"],\n'+
+'  "bear": ["弱気材料1", "弱気材料2"],\n'+
+'  "epsLow": 100,\n'+
+'  "epsHigh": 130,\n'+
+'  "epsBasis": "想定EPSレンジの根拠",\n'+
+'  "perLow": 25,\n'+
+'  "perHigh": 35,\n'+
+'  "perBasis": "妥当PERレンジの根拠",\n'+
+'  "price": 現在株価,\n'+
+'  "watch": "次の決算で見るべきポイント"\n'+
+'}';
+
+
   // ---------- state ----------
   var state = {
     cards: load(),
     tab: "list",        // list | buy | sell
     viewing: null,      // card id being shown in the detail sheet, or null
     editing: null,      // card object being edited, or null
+    pasting: false,     // AI分析JSONの貼り付けモーダル表示中か
     banner: null        // {type:'ok'|'err', text}
   };
 
@@ -268,6 +352,7 @@ button{font-family:var(--sans)}
       var vc = cardById(state.viewing);
       if(vc) html += detail(vc);
     }
+    if(state.pasting) html += pasteModal();
     app.innerHTML = html;
     bind();
   }
@@ -287,6 +372,7 @@ button{font-family:var(--sans)}
   function toolbar(){
     return ''+
       '<div class="toolbar">'+
+        '<button class="tool-btn accent" data-act="paste">＋ AI分析を貼り付け</button>'+
         '<button class="tool-btn" data-act="export">JSON書き出し</button>'+
         '<button class="tool-btn" data-act="import">JSON読み込み</button>'+
         '<span class="tool-spacer"></span>'+
@@ -310,11 +396,12 @@ button{font-family:var(--sans)}
     var d=divergence(c);
     var tone = d===null ? "" : (d<0?"under":"over");
     var no = rank ? '<span class="row-no">'+rank+'</span>' : '<span class="row-no dot">・</span>';
+    var badge = String(c.score||"").trim()!=="" ? '<span class="row-score">'+esc(c.score)+'</span>' : '';
     return '<button class="row" data-view="'+c.id+'">'+
       no+
       '<span class="row-tick">'+
         '<span class="row-code">'+esc(c.code||"—")+'</span>'+
-        '<span class="row-name">'+esc(c.name||"（無名）")+'</span>'+
+        '<span class="row-name">'+esc(c.name||"（無名）")+badge+'</span>'+
       '</span>'+
       '<span class="row-div '+tone+'">'+pct(d)+'</span>'+
     '</button>';
@@ -349,6 +436,128 @@ button{font-family:var(--sans)}
       '<span class="stat-value">'+esc(value)+'</span></div>';
   }
 
+  // ---------- paste AI analysis (JSON) ----------
+  function pasteModal(){
+    return ''+
+    '<div class="sheet-backdrop" data-act="close-paste-bg">'+
+      '<div class="sheet" data-stop="1">'+
+        '<div class="sheet-head"><h2>AI分析を貼り付け</h2><button class="x" data-act="close-paste">×</button></div>'+
+        '<div class="sheet-body">'+
+          '<p class="paste-help">ChatGPT等でIRを分析させ、返ってきた<b>JSON</b>をそのまま貼り付けてください。1銘柄でも、複数銘柄の配列でも取り込めます。</p>'+
+          '<button class="tool-btn" data-act="copy-prompt">分析プロンプトをコピー</button>'+
+          '<label class="field" style="margin-top:14px"><span class="field-label">JSON</span>'+
+            '<textarea id="pasteBox" rows="12" placeholder=\'{ "code": "6327", "name": "北川精機", ... }\'></textarea></label>'+
+        '</div>'+
+        '<div class="sheet-foot">'+
+          '<button class="ghost" data-act="close-paste">やめる</button>'+
+          '<button class="primary" data-act="apply-paste">取り込む</button>'+
+        '</div>'+
+      '</div>'+
+    '</div>';
+  }
+
+  // 貼り付けJSONを1件パースして編集フォームに流し込む（複数件は一括取り込み）
+  function applyPaste(){
+    var box = document.getElementById("pasteBox");
+    var text = box ? box.value.trim() : "";
+    if(!text){ flash("err","JSONを貼り付けてください。"); return; }
+    // ```json ... ``` のフェンスが付いていても拾えるように除去
+    text = text.replace(/^```(?:json)?/i,"").replace(/```$/,"").trim();
+    var data;
+    try{ data = JSON.parse(text); }
+    catch(e){ flash("err","JSONの形式が正しくありません。"); return; }
+
+    var list = Array.isArray(data) ? data : (data && Array.isArray(data.cards) ? data.cards : [data]);
+    if(list.length===1){
+      // 1件なら編集フォームを開いて確認・保存の流れに
+      var one = normalize(list[0]);
+      one.id = uid();
+      // 既存の同コード銘柄があれば、そのidを引き継いで上書き扱いに
+      var key = keyOf(one);
+      var existing = state.cards.filter(function(c){ return keyOf(c)===key; })[0];
+      if(existing) one.id = existing.id;
+      state.pasting=false;
+      state.editing=one;
+      render();
+    }else{
+      // 複数件は時刻マージで一括取り込み（importと同じ挙動）
+      var byKey={}; state.cards.forEach(function(c){ byKey[keyOf(c)]=c; });
+      var added=0, updated=0;
+      list.forEach(function(raw){
+        var inc=normalize(raw); inc.updatedAt = inc.updatedAt || new Date().toISOString();
+        var key=keyOf(inc), cur=byKey[key];
+        if(!cur){ inc.id=uid(); byKey[key]=inc; added++; }
+        else { inc.id=cur.id; byKey[key]=inc; updated++; }
+      });
+      state.cards = Object.keys(byKey).map(function(k){ return byKey[k]; });
+      save();
+      state.pasting=false;
+      flash("ok","取り込み完了（追加 "+added+" / 更新 "+updated+"）");
+      render();
+    }
+  }
+
+  function copyPrompt(){
+    var p = ANALYSIS_PROMPT;
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(p).then(
+        function(){ flash("ok","分析プロンプトをコピーしました。"); },
+        function(){ fallbackCopy(p); }
+      );
+    }else{ fallbackCopy(p); }
+  }
+  function fallbackCopy(text){
+    var ta=document.createElement("textarea");
+    ta.value=text; document.body.appendChild(ta); ta.select();
+    try{ document.execCommand("copy"); flash("ok","分析プロンプトをコピーしました。"); }
+    catch(e){ flash("err","コピーできませんでした。手動で選択してください。"); }
+    document.body.removeChild(ta);
+  }
+
+  // 拡張分析項目の表示ブロック（値があるものだけ出す）
+  function analysisBlock(c){
+    var out = "";
+    // 決算スコア
+    if(String(c.score||"").trim()!==""){
+      out += '<div class="score-row"><span class="score-label">決算評価</span>'+
+             '<span class="score-val">'+esc(c.score)+' <small>/ 10</small></span></div>';
+    }
+    // 評価コメント群（ある項目だけ行にする）
+    var rows = [
+      ["売上成長", c.revGrowth], ["利益成長", c.profGrowth], ["利益率変化", c.marginChange],
+      ["上振れ/下振れ", c.surprise], ["一時要因", c.oneTime], ["受注・受注残", c.orders],
+      ["継続性", c.continuity], ["次期会社予想", c.nextGuidance], ["コンセンサス", c.consensus]
+    ].filter(function(r){ return String(r[1]||"").trim()!==""; });
+    if(rows.length){
+      out += '<div class="eval-list">';
+      rows.forEach(function(r){
+        out += '<div class="eval-item"><span class="eval-k">'+esc(r[0])+'</span>'+
+               '<span class="eval-v">'+esc(r[1])+'</span></div>';
+      });
+      out += '</div>';
+    }
+    // 強気/弱気材料
+    function bullets(title,text,cls){
+      var items = String(text||"").split(/\n+/).map(function(s){return s.trim();}).filter(Boolean);
+      if(!items.length) return "";
+      var lis = items.map(function(s){ return '<li>'+esc(s)+'</li>'; }).join("");
+      return '<div class="cat '+cls+'"><span class="cat-title">'+title+'</span><ul>'+lis+'</ul></div>';
+    }
+    var bb = bullets("強気材料", c.bull, "bull") + bullets("弱気材料", c.bear, "bear");
+    if(bb) out += '<div class="cats">'+bb+'</div>';
+    // 根拠
+    var basis = "";
+    if(String(c.epsBasis||"").trim()!=="") basis += '<div class="basis"><span class="basis-k">想定EPSの根拠</span><span class="basis-v">'+esc(c.epsBasis)+'</span></div>';
+    if(String(c.perBasis||"").trim()!=="") basis += '<div class="basis"><span class="basis-k">妥当PERの根拠</span><span class="basis-v">'+esc(c.perBasis)+'</span></div>';
+    if(basis) out += basis;
+    // 次に見るポイント
+    if(String(c.watch||"").trim()!==""){
+      out += '<div class="watch"><span class="watch-k">次に見るポイント</span><span class="watch-v">'+esc(c.watch)+'</span></div>';
+    }
+    if(out) out = '<div class="analysis">'+out+'</div>';
+    return out;
+  }
+
   // ---------- detail sheet ----------
   function detail(c){
     var d=divergence(c), r=targetRange(c);
@@ -365,6 +574,7 @@ button{font-family:var(--sans)}
       '<div><span class="pr-label">現在株価</span><span class="pr-price">'+yen(c.price)+'</span></div>'+
       '<div class="pr-div"><span class="pr-label">下限乖離</span><span class="pr-val">'+pct(d)+'</span></div>'+
     '</div>';
+    body += analysisBlock(c);
     return ''+
     '<div class="sheet-backdrop" data-act="close-view-bg">'+
       '<div class="sheet" data-stop="1">'+
@@ -394,6 +604,10 @@ button{font-family:var(--sans)}
         '<input data-field="'+key+'" value="'+esc(v[key])+'" placeholder="'+ph+'"'+
         (mode?(' inputmode="'+mode+'"'):'')+'></label>';
     }
+    function ta(label,key,ph,rows){
+      return '<label class="field"><span class="field-label">'+label+'</span>'+
+        '<textarea data-field="'+key+'" rows="'+(rows||2)+'" placeholder="'+ph+'">'+esc(v[key])+'</textarea></label>';
+    }
     return ''+
     '<div class="sheet-backdrop" data-act="close-bg">'+
       '<div class="sheet" data-stop="1">'+
@@ -413,6 +627,20 @@ button{font-family:var(--sans)}
           '<label class="field"><span class="field-label">現在株価</span>'+
             '<input data-field="price" value="'+esc(v.price)+'" placeholder="2050" inputmode="decimal">'+
             '<span class="hint">想定株価レンジは EPS×PER で自動計算。乖離とランキングは「下限」と「現在株価」で出します。</span></label>'+
+          '<details class="ext"'+(hasExt(v)?' open':'')+'>'+
+            '<summary>AI分析の詳細項目</summary>'+
+            f("決算評価（10点満点）","score","8","decimal")+
+            '<div class="row2">'+ta("売上成長","revGrowth","+6.1%")+ta("利益成長","profGrowth","+52.2%")+'</div>'+
+            '<div class="row2">'+ta("利益率変化","marginChange","14.4%→12.0%予想")+ta("上振れ/下振れ","surprise","上振れ余地")+'</div>'+
+            '<div class="row2">'+ta("一時要因","oneTime","なし")+ta("受注・受注残","orders","契約負債が急増")+'</div>'+
+            '<div class="row2">'+ta("継続性","continuity","AIサーバー需要で継続的")+ta("次期会社予想","nextGuidance","売上+51.3%")+'</div>'+
+            ta("コンセンサス","consensus","会社予想を上回る想定")+
+            ta("強気材料（1行に1つ）","bull","高多層基板の需要増\\n粗利率の改善","4")+
+            ta("弱気材料（1行に1つ）","bear","会社予想が保守的すぎる可能性","4")+
+            ta("想定EPSの根拠","epsBasis","会社予想99円＋営業利益率上振れケース")+
+            ta("妥当PERの根拠","perBasis","産業機械の通常レンジ＋AI成長プレミアム")+
+            ta("次に見るポイント","watch","2Qで利益率が予想を上回るか")+
+          '</details>'+
         '</div>'+
         '<div class="sheet-foot">'+
           '<button class="ghost" data-act="close">やめる</button>'+
@@ -424,8 +652,36 @@ button{font-family:var(--sans)}
 
   // ---------- events ----------
   function blank(){
-    return {id:uid(), code:"",name:"",summary:"",memo:"",
-      epsLow:"",epsHigh:"",perLow:"",perHigh:"",price:"",rangeLow:"",rangeHigh:"",updatedAt:""};
+    return {
+      id:uid(), code:"",name:"",summary:"",memo:"",
+      epsLow:"",epsHigh:"",perLow:"",perHigh:"",price:"",
+      rangeLow:"",rangeHigh:"",updatedAt:"",
+      // --- 拡張（AI分析）項目 ---
+      score:"",              // 決算評価 10点満点
+      revGrowth:"",          // 売上成長
+      profGrowth:"",         // 利益成長
+      marginChange:"",       // 利益率変化
+      surprise:"",           // 上振れ/下振れ
+      oneTime:"",            // 一時要因
+      orders:"",             // 受注・受注残
+      continuity:"",         // 継続性
+      nextGuidance:"",       // 次期会社予想
+      consensus:"",          // コンセンサス
+      bull:"",               // 強気材料（改行区切り）
+      bear:"",               // 弱気材料（改行区切り）
+      epsBasis:"",           // 想定EPSの根拠
+      perBasis:"",           // 妥当PERの根拠
+      watch:""               // 次に見るポイント
+    };
+  }
+  // 拡張項目のキー一覧（取り込み・正規化で共通利用）
+  var EXT_KEYS = ["score","revGrowth","profGrowth","marginChange","surprise","oneTime",
+    "orders","continuity","nextGuidance","consensus","bull","bear","epsBasis","perBasis","watch"];
+  var CORE_KEYS = ["code","name","summary","memo","epsLow","epsHigh","perLow","perHigh",
+    "price","rangeLow","rangeHigh","updatedAt"];
+  // 拡張項目に何か入っているか（編集画面で詳細セクションを開くか判定）
+  function hasExt(c){
+    return EXT_KEYS.some(function(k){ return String(c[k]||"").trim()!==""; });
   }
 
   function bind(){
@@ -443,6 +699,11 @@ button{font-family:var(--sans)}
         else if(act==="save"){ saveEditing(); }
         else if(act==="export"){ doExport(); }
         else if(act==="import"){ document.getElementById("importInput").click(); }
+        else if(act==="paste"){ state.pasting=true; render(); }
+        else if(act==="close-paste"){ state.pasting=false; render(); }
+        else if(act==="close-paste-bg"){ if(e.target===b){ state.pasting=false; render(); } }
+        else if(act==="apply-paste"){ applyPaste(); }
+        else if(act==="copy-prompt"){ copyPrompt(); }
         // detail sheet
         else if(act==="close-view"){ state.viewing=null; render(); }
         else if(act==="close-view-bg"){ if(e.target===b){ state.viewing=null; render(); } }
@@ -584,8 +845,11 @@ button{font-family:var(--sans)}
   function normalize(c){
     var out = blank();
     out.id = c.id || out.id;
-    ["code","name","summary","memo","epsLow","epsHigh","perLow","perHigh","price","rangeLow","rangeHigh","updatedAt"]
-      .forEach(function(k){ if(c[k]!=null) out[k]=c[k]; });
+    CORE_KEYS.concat(EXT_KEYS).forEach(function(k){ if(c[k]!=null) out[k]=c[k]; });
+    // bull/bear は配列でも文字列でも受ける（配列なら改行区切りに）
+    ["bull","bear"].forEach(function(k){
+      if(Array.isArray(c[k])) out[k]=c[k].join("\n");
+    });
     // 旧単一eps/perフィールドがあれば下限に寄せて拾う
     if(c.eps!=null && out.epsLow==="") out.epsLow=c.eps;
     if(c.per!=null && out.perLow==="") out.perLow=c.per;
