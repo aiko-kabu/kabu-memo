@@ -137,6 +137,10 @@ button{font-family:var(--sans)}
 .ghost{flex:1; appearance:none; cursor:pointer; background:#fff; border:1px solid var(--line); color:var(--muted); padding:12px; border-radius:9px; font-size:15px; font-weight:600}
 .ghost.del{color:var(--seal); border-color:#e8c9c4}
 .primary{flex:2; appearance:none; cursor:pointer; background:var(--ink); color:#fff; border:none; padding:12px; border-radius:9px; font-size:15px; font-weight:700}
+.primary.wide{flex:1 1 100%}
+.danger-zone{margin-top:22px; padding-top:14px; border-top:1px dashed var(--line); display:flex; justify-content:center}
+.del-link{appearance:none; background:none; border:none; cursor:pointer; color:var(--muted); font-size:12.5px; font-family:var(--sans); text-decoration:underline; text-underline-offset:2px; padding:6px 10px}
+.del-link:hover{color:var(--seal)}
 
 @media (max-width:420px){ .masthead h1{font-size:22px} }
 @media (prefers-reduced-motion:reduce){*{transition:none!important; animation:none!important}}
@@ -369,10 +373,11 @@ button{font-family:var(--sans)}
           '<span class="name">'+esc(c.name||"（無名）")+'</span></div>'+
           '<button class="x" data-act="close-view">×</button>'+
         '</div>'+
-        '<div class="sheet-body">'+body+'</div>'+
+        '<div class="sheet-body">'+body+
+          '<div class="danger-zone"><button class="del-link" data-act="del-view">この銘柄を削除</button></div>'+
+        '</div>'+
         '<div class="sheet-foot">'+
-          '<button class="ghost del" data-act="del-view">削除</button>'+
-          '<button class="primary" data-act="edit-view">編集</button>'+
+          '<button class="primary wide" data-act="edit-view">編集</button>'+
         '</div>'+
       '</div>'+
     '</div>';
@@ -446,6 +451,9 @@ button{font-family:var(--sans)}
           if(c){ state.editing=JSON.parse(JSON.stringify(c)); state.viewing=null; render(); }
         }
         else if(act==="del-view"){
+          var c=cardById(state.viewing);
+          var label = c ? ((c.name||c.code||"この銘柄")) : "この銘柄";
+          if(!window.confirm("「"+label+"」を削除します。よろしいですか？")) return;
           var id=state.viewing;
           state.cards=state.cards.filter(function(x){return x.id!==id;});
           state.viewing=null; save(); render();
