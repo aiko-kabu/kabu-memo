@@ -187,6 +187,14 @@ button{font-family:var(--sans)}
 .ext summary{cursor:pointer; padding:12px 0; font-size:13.5px; font-weight:700; color:var(--ink); font-family:var(--sans); list-style-position:inside}
 .ext[open] summary{border-bottom:1px solid var(--line); margin-bottom:12px}
 .ext .field{margin-bottom:12px}
+
+/* inline memo editor in detail */
+.memo-edit{margin-top:4px; background:#faf8f0; border:1px solid var(--line); border-radius:8px; padding:12px 14px}
+.memo-edit-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:8px}
+.memo-edit-label{font-size:12px; color:var(--muted); font-weight:700; font-family:var(--sans)}
+.memo-save{appearance:none; cursor:pointer; background:var(--ink); color:#fff; border:none; font-family:var(--sans); font-size:12px; font-weight:700; padding:5px 14px; border-radius:6px}
+.memo-edit textarea{width:100%; font-family:var(--sans); font-size:14px; line-height:1.6; padding:10px 12px; border:1px solid var(--line); border-radius:7px; background:#fff; color:var(--ink); resize:vertical}
+.memo-edit textarea:focus{outline:2px solid var(--accent); outline-offset:-1px; border-color:var(--accent)}
 </style>
 </head>
 <body>
@@ -212,11 +220,12 @@ button{font-family:var(--sans)}
 '- epsLow/epsHighは想定EPSのレンジ、perLow/perHighは妥当と考えるPERのレンジ。\n'+
 '- bull/bear は配列で、それぞれ根拠を1つずつ簡潔に。\n'+
 '- 各根拠（epsBasis, perBasis）は「なぜその数字か」が半年後に分かるように具体的に。\n'+
+'- summary（会社概要）は、株や業界の予備知識がない人にも伝わるように、専門用語を避けて小学生でもわかる言葉で説明してください。難しい用語を使うときは「〜（つまり◯◯なもの）」のように身近な例えを添えること。\n'+
 '- 不明な項目は空文字 "" にしてください。憶測で埋めないこと。\n\n'+
 '{\n'+
 '  "code": "証券コード",\n'+
 '  "name": "会社名",\n'+
-'  "summary": "どんな会社か・主力事業・注目テーマを1〜2文で",\n'+
+'  "summary": "この会社が何をして稼いでいるかを、専門用語なしで小学生でもわかるように2〜3文で。例：「スマホやパソコンの中に入っている小さな部品を作る会社。この部品がないと機械が動かないので、世界中のメーカーが買っている。」",\n'+
 '  "memo": "決算の要点を自由文で（売上・利益・利益率・受注などの数字を含めて）",\n'+
 '  "score": 8,\n'+
 '  "revGrowth": "売上成長の評価",\n'+
@@ -564,7 +573,6 @@ button{font-family:var(--sans)}
     var tone = d===null ? "" : (d<0?"under":"over");
     var body = "";
     if(c.summary) body += '<p class="summary">'+esc(c.summary)+'</p>';
-    if(c.memo) body += '<p class="memo">'+esc(c.memo)+'</p>';
     body += '<div class="stats">'+
       stat("想定EPS", rangeText(c.epsLow,c.epsHigh), false)+
       stat("想定PER", rangeText(c.perLow,c.perHigh), false)+
@@ -575,6 +583,12 @@ button{font-family:var(--sans)}
       '<div class="pr-div"><span class="pr-label">下限乖離</span><span class="pr-val">'+pct(d)+'</span></div>'+
     '</div>';
     body += analysisBlock(c);
+    // 自由メモ（詳細画面から直接編集・その場保存）
+    body += '<div class="memo-edit">'+
+      '<div class="memo-edit-head"><span class="memo-edit-label">自由メモ</span>'+
+      '<button class="memo-save" data-act="save-memo">保存</button></div>'+
+      '<textarea id="memoBox" rows="4" placeholder="自分用のメモ。思ったこと、気になる点など。">'+esc(c.memo)+'</textarea>'+
+    '</div>';
     return ''+
     '<div class="sheet-backdrop" data-act="close-view-bg">'+
       '<div class="sheet" data-stop="1">'+
@@ -615,7 +629,7 @@ button{font-family:var(--sans)}
         '<div class="sheet-body">'+
           '<div class="row2">'+f("コード","code","6367","numeric")+f("銘柄名","name","ダイキン","")+'</div>'+
           '<label class="field"><span class="field-label">どんな会社か</span>'+
-            '<input data-field="summary" value="'+esc(v.summary)+'" placeholder="空調の世界大手。業務用に強い。"></label>'+
+            '<input data-field="summary" value="'+esc(v.summary)+'" placeholder="小学生でもわかる言葉で。例：エアコンを作る世界一の会社。"></label>'+
           '<label class="field"><span class="field-label">決算メモ</span>'+
             '<textarea data-field="memo" rows="4" placeholder="1Q eps◯◯、○○が好調。割引要素は…">'+esc(v.memo)+'</textarea></label>'+
           '<div class="row2">'+f("想定EPS 下限","epsLow","135","decimal")+f("想定EPS 上限","epsHigh","135","decimal")+'</div>'+
@@ -718,6 +732,17 @@ button{font-family:var(--sans)}
           var id=state.viewing;
           state.cards=state.cards.filter(function(x){return x.id!==id;});
           state.viewing=null; save(); render();
+        }
+        else if(act==="save-memo"){
+          var box=document.getElementById("memoBox");
+          var c=cardById(state.viewing);
+          if(c && box){
+            c.memo = box.value;
+            c.updatedAt = new Date().toISOString();
+            save();
+            flash("ok","メモを保存しました。");
+            render();
+          }
         }
       };
     });
