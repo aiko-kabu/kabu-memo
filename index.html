@@ -162,6 +162,9 @@ button{font-family:var(--sans)}
 .score-label{font-size:13px; font-family:var(--sans); letter-spacing:.04em}
 .score-val{font-size:24px; font-weight:800; font-family:var(--sans); font-variant-numeric:tabular-nums}
 .score-val small{font-size:13px; font-weight:600; opacity:.7}
+.profit-model{background:#fff8ea; border:1px solid #ead7aa; border-left:4px solid var(--accent); border-radius:0 8px 8px 0; padding:11px 14px; display:flex; flex-direction:column; gap:4px}
+.pm-k{font-size:11.5px; color:var(--accent); font-weight:800; font-family:var(--sans); letter-spacing:.06em}
+.pm-v{font-size:14.5px; color:var(--ink); font-weight:600; font-family:var(--sans); line-height:1.6}
 .eval-list{display:flex; flex-direction:column; gap:1px; background:var(--line); border:1px solid var(--line); border-radius:8px; overflow:hidden}
 .eval-item{display:grid; grid-template-columns:104px 1fr; gap:10px; background:var(--card); padding:9px 12px}
 .eval-k{font-size:12px; color:var(--muted); font-family:var(--sans); font-weight:600}
@@ -229,21 +232,24 @@ button{font-family:var(--sans)}
 '- bull/bear は配列で、それぞれ根拠を1つずつ簡潔に。\n'+
 '- 各根拠（epsBasis, perBasis）は「なぜその数字か」が半年後に分かるように具体的に。\n'+
 '- 分析の前提として、累計（前年同期比）だけでなく、四半期単体に分解して前四半期比（QonQ）でも変化を確認したうえで総合的に評価してください。どちらか一方に偏らず、両方を普通に見たフラットな判断にすること。月次開示がある会社は直近の月次トレンドも参考にし、月次開示がなければ触れなくてよい。\n'+
+'- 増益・減益は結果だけでなく、増減要因に分解して金額で示すこと（例：原料高▲6.0億、値上げ等の販売活動＋4.5億、償却増▲0.2億）。資料に増減要因の内訳があればそれを使い、なければ分かる範囲で分解する。\n'+
+'- 各要因が「いつから効き始めるか／いつ剥落するか」の時間軸も見ること（例：値上げは6月出荷分からで1Qは1ヶ月分のみ、2Q以降フル寄与。新工場の償却は竣工後の◯期から）。今期の数字に何が一部しか乗っておらず、次の四半期以降に何が上乗せ・剥落するかを書く。\n'+
 '- summary（会社概要）は、株や業界の予備知識がない人にも伝わるように、専門用語を避けて小学生でもわかる言葉で説明してください。難しい用語を使うときは「〜（つまり◯◯なもの）」のように身近な例えを添えること。\n'+
 '- 不明な項目は空文字 "" にしてください。憶測で埋めないこと。\n\n'+
 '{\n'+
 '  "code": "証券コード",\n'+
 '  "name": "会社名",\n'+
 '  "summary": "この会社が何をして稼いでいるかを、専門用語なしで小学生でもわかるように2〜3文で。例：「スマホやパソコンの中に入っている小さな部品を作る会社。この部品がないと機械が動かないので、世界中のメーカーが買っている。」",\n'+
-'  "memo": "決算の要点を自由文で（売上・利益・利益率・受注などの数字を含めて）",\n'+
+'  "memo": "決算の要点を自由文で（売上・利益・利益率・受注などの数字と、利益の増減要因の金額内訳を含めて）",\n'+
+'  "profitModel": "この会社の利益がどういう条件で出る／伸びるのかを一言で（例：値上げはコスト転嫁なので、利益は原料が下がって値上げが残る局面で出る）",\n'+
 '  "score": 8,\n'+
 '  "revGrowth": "売上成長の評価（累計と四半期単体の両方に触れる）",\n'+
 '  "profGrowth": "利益成長の評価（累計と四半期単体の両方に触れる）",\n'+
-'  "marginChange": "利益率の変化（累計だけでなく四半期単体のトレンドも見る）",\n'+
+'  "marginChange": "利益率の変化（累計だけでなく四半期単体のトレンドも見る。何が利益率を押し上げ／押し下げたかを要因で）",\n'+
 '  "surprise": "会社予想やコンセンサスに対する上振れ/下振れ",\n'+
 '  "oneTime": "一時要因の有無と内容",\n'+
 '  "orders": "受注・受注残・契約負債など先行指標",\n'+
-'  "continuity": "この好調/不調は継続的か",\n'+
+'  "continuity": "この好調/不調は継続的か。今期に一部しか乗っていない要因や、次の四半期以降に上乗せ・剥落する要因を時間軸で",\n'+
 '  "nextGuidance": "次期の会社予想",\n'+
 '  "consensus": "市場コンセンサスとの比較",\n'+
 '  "bull": ["強気材料1", "強気材料2"],\n'+
@@ -540,6 +546,11 @@ button{font-family:var(--sans)}
       out += '<div class="score-row"><span class="score-label">決算評価</span>'+
              '<span class="score-val">'+esc(c.score)+' <small>/ 10</small></span></div>';
     }
+    // 利益構造（この会社の肝を一言で）
+    if(String(c.profitModel||"").trim()!==""){
+      out += '<div class="profit-model"><span class="pm-k">利益構造</span>'+
+             '<span class="pm-v">'+esc(c.profitModel)+'</span></div>';
+    }
     // 評価コメント群（ある項目だけ行にする）
     var rows = [
       ["売上成長", c.revGrowth], ["利益成長", c.profGrowth], ["利益率変化", c.marginChange],
@@ -653,6 +664,7 @@ button{font-family:var(--sans)}
           '<details class="ext"'+(hasExt(v)?' open':'')+'>'+
             '<summary>AI分析の詳細項目</summary>'+
             f("決算評価（10点満点）","score","8","decimal")+
+            ta("利益構造（どういう条件で利益が出るか）","profitModel","原料が下がって値上げが残る局面で利益が出る")+
             '<div class="row2">'+ta("売上成長","revGrowth","+6.1%")+ta("利益成長","profGrowth","+52.2%")+'</div>'+
             '<div class="row2">'+ta("利益率変化","marginChange","14.4%→12.0%予想")+ta("上振れ/下振れ","surprise","上振れ余地")+'</div>'+
             '<div class="row2">'+ta("一時要因","oneTime","なし")+ta("受注・受注残","orders","契約負債が急増")+'</div>'+
@@ -694,12 +706,13 @@ button{font-family:var(--sans)}
       bear:"",               // 弱気材料（改行区切り）
       epsBasis:"",           // 想定EPSの根拠
       perBasis:"",           // 妥当PERの根拠
-      watch:""               // 次に見るポイント
+      watch:"",              // 次に見るポイント
+      profitModel:""         // 利益構造（どういう条件で利益が出るか）
     };
   }
   // 拡張項目のキー一覧（取り込み・正規化で共通利用）
   var EXT_KEYS = ["score","revGrowth","profGrowth","marginChange","surprise","oneTime",
-    "orders","continuity","nextGuidance","consensus","bull","bear","epsBasis","perBasis","watch"];
+    "orders","continuity","nextGuidance","consensus","bull","bear","epsBasis","perBasis","watch","profitModel"];
   var CORE_KEYS = ["code","name","summary","memo","epsLow","epsHigh","perLow","perHigh",
     "price","rangeLow","rangeHigh","updatedAt"];
   // 拡張項目に何か入っているか（編集画面で詳細セクションを開くか判定）
